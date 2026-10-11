@@ -12,7 +12,17 @@ Aplicativo de janela para Windows que converte vários vídeos de uma vez entre 
 
 ![Maquete da interface](design/maquete_conversor.png)
 
-## Requisitos
+## Baixar e usar (Windows)
+
+1. Abra a página de [**Releases**](https://github.com/vonhauke/conversor-de-videos/releases/latest) e baixe o arquivo **Conversor de Videos.exe**.
+2. Dê dois cliques nele. Não precisa instalar nada: o FFmpeg já vai dentro do programa.
+
+> Na primeira vez, o Windows pode mostrar um aviso azul (SmartScreen), porque o programa não é assinado.
+> Clique em **Mais informações → Executar assim mesmo**.
+
+## Rodar pelo código-fonte
+
+Se preferir rodar sem o `.exe`, você precisa de:
 
 - Windows
 - Python 3.10+
@@ -55,17 +65,20 @@ O FFmpeg do seu sistema precisa ter esses codecs habilitados (as builds comuns p
 
 ## Gerar o .exe
 
+Precisa do FFmpeg em `C:\ffmpeg\bin` (`ffmpeg.exe` e `ffprobe.exe`), que são embutidos no executável.
+
 ```
 pip install pyinstaller customtkinter pillow
-pyinstaller "Conversor de Videos.spec"
+python build_exe.py
 ```
 
-O executável sai em `dist/`. O FFmpeg **não** vai embutido: continua sendo necessário tê-lo no `PATH`.
+O executável sai em `dist/`, em um único arquivo.
 
 ## Estrutura
 
 | Arquivo | Função |
 |---------|--------|
 | `main.py` | Interface gráfica (CustomTkinter) e controle da fila |
+| `build_exe.py` | Gera o `.exe` com o FFmpeg embutido |
 | `ffmpeg_utils.py` | Monta os comandos do FFmpeg, executa a conversão e informa o progresso |
 | `design/` | Maquete da interface (HTML e PNG) |

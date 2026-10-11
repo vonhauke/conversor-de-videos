@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 
 VIDEO_FORMATS = ["mp4", "mov", "avi", "mkv", "webm", "raw"]
 
@@ -36,12 +37,21 @@ _NO_WINDOW = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDO
 _TIME_RE = re.compile(r"time=(\d+):(\d+):(\d+\.\d+)")
 
 
+def _bundled(name):
+    """Caminho do binário embutido no .exe (PyInstaller), ou None se não houver."""
+    base = getattr(sys, "_MEIPASS", None)
+    if not base:
+        return None
+    candidate = os.path.join(base, "ffmpeg", f"{name}.exe")
+    return candidate if os.path.isfile(candidate) else None
+
+
 def find_ffmpeg():
-    return shutil.which("ffmpeg")
+    return _bundled("ffmpeg") or shutil.which("ffmpeg")
 
 
 def find_ffprobe():
-    return shutil.which("ffprobe")
+    return _bundled("ffprobe") or shutil.which("ffprobe")
 
 
 def probe_duration_seconds(path):
@@ -85,7 +95,7 @@ def build_command(input_path, output_path, output_format, raw_in=None, raw_out=N
     raw_out: {"pix_fmt"} describing the desired output, required when
              output_format == "raw".
     """
-    cmd = ["ffmpeg", "-y"]
+    cmd = [find_ffmpeg() or "ffmpeg", "-y"]
 
     if raw_in is not None:
         cmd += [
