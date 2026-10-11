@@ -31,16 +31,14 @@ Se preferir rodar sem o `.exe`, você precisa de:
 ## Como usar
 
 ```
-pip install customtkinter pillow
+pip install customtkinter pillow tkinterdnd2
 python main.py
 ```
 
-1. Clique em **+ Adicionar arquivos** (ou na área pontilhada) e escolha os vídeos.
+1. **Arraste os vídeos** do Explorer para a janela, ou clique em **+ Adicionar arquivos** (ou na área pontilhada) e escolha-os.
 2. Escolha o formato em **Converter para**.
 3. Se quiser, troque a pasta em **Salvar em** (padrão: a pasta do primeiro vídeo adicionado).
 4. Clique em **Converter tudo** e acompanhe o progresso.
-
-> Arrastar e soltar arquivos ainda não está disponível; por enquanto use o seletor de arquivos.
 
 ## Arquivos .raw
 
@@ -51,14 +49,21 @@ Um `.raw` não tem cabeçalho, então o FFmpeg precisa saber como interpretá-lo
   configurações diferentes, converta-os em lotes separados.
 - **Como saída:** ao escolher `RAW`, aparece o seletor de formato de pixel da saída (`rgb24`, `rgba`, `yuv420p`, entre outros).
 
-## Codecs usados
+## Velocidade e codecs
+
+O app prioriza a velocidade:
+
+- **Sem recodificar:** se o vídeo já está num codec que o formato de destino aceita (por exemplo, MOV com H.264 ou HEVC para MP4), o app só troca o "container" e copia o vídeo e o áudio como estão. Leva segundos, mesmo em arquivos grandes, e não perde qualidade.
+- **MP4, MOV e MKV recodificados:** usa o chip de vídeo do computador (NVIDIA NVENC, Intel Quick Sync ou AMD AMF) quando houver um que funcione. Ele é testado automaticamente na primeira conversão. Se não houver, ou se falhar em algum arquivo, converte pelo processador com H.264 no modo `veryfast`.
+- **WEBM recodificado:** VP9 no modo `realtime`, várias vezes mais rápido que o padrão do FFmpeg, com arquivo um pouco maior.
+- Se a cópia falhar em algum arquivo, o app tenta de novo recodificando, sem você precisar fazer nada.
 
 | Formato | Vídeo | Áudio |
 |---------|-------|-------|
-| MP4, MOV | H.264 (`libx264`, `yuv420p`) | AAC |
-| MKV | H.264 (`libx264`) | AAC |
+| MP4, MOV | H.264 ou HEVC copiado; senão H.264 (hardware ou `libx264`) | AAC (ou o original, se compatível) |
+| MKV | Copiado se compatível; senão H.264 | AAC (ou o original, se compatível) |
 | AVI | MPEG-4 (`mpeg4`, tag `xvid`) | MP3 |
-| WEBM | VP9 (`libvpx-vp9`) | Opus |
+| WEBM | VP9 copiado, ou recodificado em `realtime` | Opus |
 | RAW | `rawvideo` no formato de pixel escolhido | — |
 
 O FFmpeg do seu sistema precisa ter esses codecs habilitados (as builds comuns para Windows já têm).
@@ -68,7 +73,7 @@ O FFmpeg do seu sistema precisa ter esses codecs habilitados (as builds comuns p
 Precisa do FFmpeg em `C:\ffmpeg\bin` (`ffmpeg.exe` e `ffprobe.exe`), que são embutidos no executável.
 
 ```
-pip install pyinstaller customtkinter pillow
+pip install pyinstaller customtkinter pillow tkinterdnd2
 python build_exe.py
 ```
 

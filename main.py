@@ -4,9 +4,9 @@ Converte, em lote, entre mp4, mov, avi, mkv, webm e .raw (vídeo bruto sem
 cabeçalho, usado em fluxos de glitch art). Usa o FFmpeg instalado no sistema.
 
 Layout e cores seguem design/maquete_conversor.png (grafite, marfim e âmbar).
-Arrastar e soltar arquivos fica para uma segunda etapa: por enquanto, tanto o
-botão "+ Adicionar arquivos" quanto um clique na área de soltar abrem o
-diálogo de seleção de arquivos.
+Os arquivos podem ser arrastados do Explorer para qualquer ponto da janela
+(tkinterdnd2) ou escolhidos pelo botão "+ Adicionar arquivos" / clique na área
+de soltar, que abrem o diálogo de seleção de arquivos.
 """
 
 import os
@@ -16,6 +16,7 @@ from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 from PIL import Image, ImageTk
+from tkinterdnd2 import DND_FILES, TkinterDnD
 
 import ffmpeg_utils as fu
 
@@ -155,14 +156,15 @@ class FileRow(ctk.CTkFrame):
             self.status_label.configure(text=f"Convertendo · {int((fraction or 0) * 100)}%")
 
 
-class App(ctk.CTk):
+class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self):
         super().__init__()
+        self._dnd_ok = self._ativar_arrastar_e_soltar()
         ctk.set_appearance_mode("dark")
 
         self.title("Conversor de Vídeos")
-        self.geometry("760x800")
-        self.minsize(720, 580)
+        self._ajustar_janela(760, 800, 720, 580)
+        self._altura_max_real = self._cliente_max_real()[1]
         self.configure(fg_color=COL_BG)
         self._set_window_icon()
 
@@ -186,9 +188,84 @@ class App(ctk.CTk):
         self._cancel_event = threading.Event()
         self._converting = False
         self._format_buttons = {}
+        self._cor_borda_drop = COL_DROP_BORDER
 
         self._build_ui()
+        self._encaixar_conteudo()
         self._check_ffmpeg()
+
+    def _ativar_arrastar_e_soltar(self):
+        """Faz a janela inteira aceitar arquivos arrastados do Explorer."""
+        try:
+            self.TkdndVersion = TkinterDnD._require(self)
+            self.drop_target_register(DND_FILES)
+            self.dnd_bind("<<Drop>>", self._on_drop)
+            self.dnd_bind("<<DropEnter>>", lambda e: self._destacar_area(True))
+            self.dnd_bind("<<DropLeave>>", lambda e: self._destacar_area(False))
+            return True
+        except Exception:
+            return False  # sem arrastar e soltar, o botão de escolher arquivos continua valendo
+
+    def _destacar_area(self, ativo):
+        self._cor_borda_drop = COL_AMBER if ativo else COL_DROP_BORDER
+        self.drop_zone.event_generate("<Configure>")
+
+    def _on_drop(self, event):
+        self._destacar_area(False)
+        self._add_paths(self.tk.splitlist(event.data))
+        return event.action
+
+    @staticmethod
+    def _area_util(tela_w, tela_h):
+        """Área de trabalho em pixels reais (sem a barra de tarefas); estimativa se não achar."""
+        try:
+            import ctypes
+            from ctypes import wintypes
+            r = wintypes.RECT()
+            if ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(r), 0):
+                return r.right - r.left, r.bottom - r.top
+        except Exception:
+            pass
+        return tela_w, int(tela_h * 0.93)
+
+    def _cliente_max_real(self):
+        """Maior área (em pixels reais) que o conteúdo da janela pode ocupar, já descontando
+        a barra de título e as bordas do Windows e uma folga nas margens da tela."""
+        escala = self._get_window_scaling()
+        util_w, util_h = self._area_util(self.winfo_screenwidth(), self.winfo_screenheight())
+        return util_w - int(24 * escala) - 16, util_h - int(52 * escala) - 16
+
+    def _encaixar_conteudo(self):
+        """Em telas baixas, reduz a escala dos elementos para que nada fique cortado,
+        mesmo com todos os painéis (.raw de entrada e de saída) abertos ao mesmo tempo."""
+        self.raw_in_panel.grid(row=2, column=0, sticky="ew", padx=26, pady=(0, 14))
+        self.raw_out_panel.grid(row=4, column=0, sticky="ew", padx=26, pady=(0, 14))
+        self.update_idletasks()
+        escala = self._get_window_scaling()
+        lista_minima = 130 * escala
+        necessario = self.winfo_reqheight() - self.body.winfo_reqheight() + lista_minima
+        self._refresh_visibility()
+
+        if necessario > self._altura_max_real:
+            fator = max(0.7, self._altura_max_real / necessario)
+            ctk.set_widget_scaling(fator)
+            self.update_idletasks()
+
+    def _ajustar_janela(self, largura, altura, min_largura, min_altura):
+        """Abre a janela no tamanho ideal, mas nunca maior que a tela do computador em uso,
+        centralizada. O CustomTkinter multiplica os valores pela escala do Windows (DPI),
+        então converto o espaço disponível (pixels reais) para o tamanho "lógico"."""
+        escala = self._get_window_scaling()
+        max_w, max_h = (v / escala for v in self._cliente_max_real())
+
+        largura, altura = min(largura, int(max_w)), min(altura, int(max_h))
+        self.minsize(min(min_largura, largura), min(min_altura, altura))
+        self.geometry(f"{largura}x{altura}")
+
+        util_w, util_h = self._area_util(self.winfo_screenwidth(), self.winfo_screenheight())
+        x = max((util_w - int(largura * escala) - int(24 * escala)) // 2, 0)
+        y = max((util_h - int(altura * escala) - int(52 * escala)) // 2, 0)
+        self.geometry(f"+{x}+{y}")
 
     def _set_window_icon(self):
         if not os.path.exists(ICON_PATH):
@@ -262,7 +339,7 @@ class App(ctk.CTk):
             w, h = canvas.winfo_width(), canvas.winfo_height()
             if w > 4 and h > 4:
                 canvas.create_rectangle(
-                    2, 2, w - 2, h - 2, outline=COL_DROP_BORDER, width=2,
+                    2, 2, w - 2, h - 2, outline=self._cor_borda_drop, width=2,
                     dash=(6, 4), tags="border",
                 )
 
@@ -565,16 +642,21 @@ class App(ctk.CTk):
     # --------------------------------------------------------- lista de arquivos
     def _add_files(self):
         paths = filedialog.askopenfilenames(title="Escolha os arquivos de vídeo")
+        self._add_paths(paths)
+
+    def _add_paths(self, paths):
+        paths = [os.path.normpath(p) for p in paths if os.path.isfile(p)]
         if not paths:
             return
         existing = {item["path"] for item in self.files}
         for path in paths:
             if path in existing:
                 continue
+            existing.add(path)
             row = FileRow(self.queue_frame, path, self._remove_file, self._view_log)
             row.pack(fill="x", padx=4, pady=2)
             self.files.append({"path": path, "status": STATUS_PENDENTE, "log": "", "row": row})
-        if not self.output_dir.get() and paths:
+        if not self.output_dir.get():
             self.output_dir.set(os.path.dirname(paths[0]))
             self.dest_label.configure(text=self.output_dir.get())
         self._update_subtitle()
@@ -698,7 +780,6 @@ class App(ctk.CTk):
             output_path = self._unique_output_path(path, out_dir, out_format, used_names)
 
             item_raw_in = raw_in if self._is_raw(path) else None
-            cmd = fu.build_command(path, output_path, out_format, item_raw_in, raw_out)
 
             if item_raw_in is not None:
                 total_duration = fu.estimate_raw_duration_seconds(
@@ -714,9 +795,20 @@ class App(ctk.CTk):
                 overall = base + (fraction or 0) / total
                 self.after(0, self._update_progress_ui, path, fraction, overall)
 
-            success, log, cancelled = fu.run_conversion(
-                cmd, on_progress, total_duration, self._cancel_event.is_set
-            )
+            # 1º: copia sem recodificar (quando dá); 2º: recodifica com aceleração de vídeo;
+            # 3º: recodifica pelo processador, que sempre funciona.
+            tentativas = ({}, {"allow_copy": False}, {"allow_copy": False, "use_hw": False})
+            ja_tentou = set()
+            for opcoes in tentativas:
+                cmd = fu.build_command(path, output_path, out_format, item_raw_in, raw_out, **opcoes)
+                if tuple(cmd) in ja_tentou:
+                    continue
+                ja_tentou.add(tuple(cmd))
+                success, log, cancelled = fu.run_conversion(
+                    cmd, on_progress, total_duration, self._cancel_event.is_set
+                )
+                if success or cancelled:
+                    break
 
             if cancelled:
                 self.after(0, self._set_item_status, path, STATUS_CANCELADO)
