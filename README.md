@@ -82,3 +82,12 @@ O executável sai em `dist/`, em um único arquivo.
 | `build_exe.py` | Gera o `.exe` com o FFmpeg embutido |
 | `ffmpeg_utils.py` | Monta os comandos do FFmpeg, executa a conversão e informa o progresso |
 | `design/` | Maquete da interface (HTML e PNG) |
+
+## Licenças
+
+O arquivo `.exe` leva dentro o [FFmpeg](https://ffmpeg.org) (`ffmpeg.exe` e `ffprobe.exe`), versão 9.0.1 "essentials",
+compilada por [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) com `--enable-gpl --enable-version3`,
+ou seja, licenciada sob a **GNU GPL versão 3**. O FFmpeg não é obra minha: o código-fonte dele está em
+<https://ffmpeg.org/download.html> e o da build usada, em <https://www.gyan.dev/ffmpeg/builds/>.
+O texto da licença está em <https://www.gnu.org/licenses/gpl-3.0.html>.
+
