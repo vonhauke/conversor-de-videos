@@ -38,11 +38,12 @@ _TIME_RE = re.compile(r"time=(\d+):(\d+):(\d+\.\d+)")
 
 
 def _bundled(name):
-    """Caminho do binário embutido no .exe (PyInstaller), ou None se não houver."""
+    """Caminho do binário embutido no executável (PyInstaller), ou None se não houver."""
     base = getattr(sys, "_MEIPASS", None)
     if not base:
         return None
-    candidate = os.path.join(base, "ffmpeg", f"{name}.exe")
+    ext = ".exe" if sys.platform == "win32" else ""
+    candidate = os.path.join(base, "ffmpeg", f"{name}{ext}")
     return candidate if os.path.isfile(candidate) else None
 
 

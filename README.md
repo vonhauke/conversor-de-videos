@@ -57,6 +57,7 @@ O app prioriza a velocidade:
 - **MP4, MOV e MKV recodificados:** usa o chip de vídeo do computador (NVIDIA NVENC, Intel Quick Sync ou AMD AMF) quando houver um que funcione. Ele é testado automaticamente na primeira conversão. Se não houver, ou se falhar em algum arquivo, converte pelo processador com H.264 no modo `veryfast`.
 - **WEBM recodificado:** VP9 no modo `realtime`, várias vezes mais rápido que o padrão do FFmpeg, com arquivo um pouco maior.
 - Se a cópia falhar em algum arquivo, o app tenta de novo recodificando, sem você precisar fazer nada.
+- No Mac, a aceleração por hardware (NVENC/Quick Sync/AMF) não existe, então recodificações usam sempre o processador (`libx264`), um pouco mais lentas.
 
 | Formato | Vídeo | Áudio |
 |---------|-------|-------|
@@ -68,7 +69,7 @@ O app prioriza a velocidade:
 
 O FFmpeg do seu sistema precisa ter esses codecs habilitados (as builds comuns para Windows já têm).
 
-## Gerar o .exe
+## Gerar o .exe (Windows)
 
 Precisa do FFmpeg em `C:\ffmpeg\bin` (`ffmpeg.exe` e `ffprobe.exe`), que são embutidos no executável.
 
@@ -79,12 +80,34 @@ python build_exe.py
 
 O executável sai em `dist/`, em um único arquivo.
 
+## Gerar o .app (Mac)
+
+Só funciona rodando no próprio Mac (o PyInstaller não faz build cruzado).
+
+```
+brew install python ffmpeg
+cd mac
+pip3 install pyinstaller customtkinter pillow tkinterdnd2
+python3 build_mac.py
+```
+
+O script usa o `ffmpeg`/`ffprobe` do Homebrew (achados no PATH), empacota tudo com
+PyInstaller e deixa o resultado em `mac/dist/Conversor de Videos.app`, copiando
+também para a Área de Trabalho. Sem build, dá pra rodar direto o código-fonte:
+
+```
+brew install python ffmpeg
+pip3 install customtkinter pillow tkinterdnd2
+python3 main.py
+```
+
 ## Estrutura
 
 | Arquivo | Função |
 |---------|--------|
 | `main.py` | Interface gráfica (CustomTkinter) e controle da fila |
-| `build_exe.py` | Gera o `.exe` com o FFmpeg embutido |
+| `build_exe.py` | Gera o `.exe` (Windows) com o FFmpeg embutido |
+| `mac/build_mac.py` | Gera o `.app` (Mac) com o FFmpeg do Homebrew embutido |
 | `ffmpeg_utils.py` | Monta os comandos do FFmpeg, executa a conversão e informa o progresso |
 | `design/` | Maquete da interface (HTML e PNG) |
 
