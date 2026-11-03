@@ -19,6 +19,7 @@ import time
 import traceback
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")   # o console do Windows usa cp1252
 sys.path.insert(0, RAIZ)
 if os.environ.get("FFMPEG_DIR"):
     os.environ["PATH"] = os.environ["FFMPEG_DIR"] + os.pathsep + os.environ["PATH"]

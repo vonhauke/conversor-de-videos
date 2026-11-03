@@ -9,6 +9,8 @@ import glob
 import os
 import sys
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 ORDEM = ["conferir_eventos", "conferir", "teste", "testes", "build", "webview2", "ffmpeg", "deps"]
 LINHAS, LARGURA = 40, 200
 

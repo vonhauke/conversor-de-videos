@@ -14,6 +14,8 @@ jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 40
+    env:
+      PYTHONUTF8: "1"   # saida do Python em UTF-8 (o console do Windows usa cp1252)
     defaults:
       run:
         shell: bash
