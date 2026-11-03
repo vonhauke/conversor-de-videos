@@ -1,4 +1,4 @@
-# Gera o "Conversor de Videos.exe" (Windows) e o "Conversor de Videos.app" (Mac) na nuvem do GitHub a cada envio para a main
+# Gera o "Conversor de Videos.exe" (Windows) e o "Conversor de Videos.app" (Mac) na nuvem do GitHub a cada envio para a master
 # (ou para a branch do redesign) e quando acionado pela aba Actions.
 # Antes de gerar, roda o teste de ponta a ponta na janela real (.github/teste_e2e.py).
 # Os arquivos ficam disponiveis para download na pagina da execucao, em "Artifacts".
