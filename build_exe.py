@@ -1,7 +1,7 @@
 """Gera "Conversor de Videos.exe" (arquivo único) em dist/, com ffmpeg e ffprobe embutidos.
 
 Uso:
-    pip install pyinstaller customtkinter pillow tkinterdnd2
+    pip install pyinstaller pywebview
     python build_exe.py
 """
 
@@ -17,8 +17,8 @@ args = [
     "--name", "Conversor de Videos",
     "--icon", os.path.join(AQUI, "icone_conversor.ico"),
     "--add-data", f"{os.path.join(AQUI, 'icone_conversor.png')};.",
-    "--collect-all", "customtkinter",
-    "--collect-all", "tkinterdnd2",
+    "--add-data", f"{os.path.join(AQUI, 'ui')};ui",   # a interface (HTML/CSS/JS, fontes e icones)
+    "--collect-all", "webview",                     # pywebview (janela com o Edge WebView2)
 ]
 for nome in ("ffmpeg.exe", "ffprobe.exe"):
     caminho = os.path.join(FFMPEG_BIN, nome)

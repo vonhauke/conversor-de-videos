@@ -1,0 +1,78 @@
+/* Conversor de Videos - estilos proprios (o resto vem do design system em ds/) */
+
+.janela { height: 100vh; display: flex; flex-direction: column; gap: 14px; padding: 24px 26px 22px; }
+
+.cabecalho { display: flex; align-items: center; gap: 12px; }
+
+.corpo { flex: 1; min-height: 140px; display: flex; flex-direction: column; }
+
+/* area para soltar (fila vazia) */
+.soltar { flex: 1; width: 100%; cursor: pointer; font: inherit; }
+.soltar:hover { border-color: var(--acento); }
+.soltar-icone {
+  width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; margin-bottom: 6px;
+  background: var(--acento-suave); color: var(--acento-texto);
+}
+.soltar .link { color: var(--acento-texto); font-weight: 600; }
+
+/* tela inteira ao arrastar arquivos */
+.soltar-tela {
+  position: fixed; inset: 10px; z-index: 70; border-radius: var(--r-xl);
+  border: 2px dashed var(--acento); background: color-mix(in srgb, var(--fundo) 88%, transparent);
+  display: grid; place-items: center; pointer-events: none; animation: aparece var(--t-rapido);
+}
+.soltar-tela > div { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--acento-texto); }
+
+/* fila */
+.fila { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.fila-cabeca { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px 10px; border-bottom: 1px solid var(--borda); }
+.fila .lista { flex: 1; min-height: 0; }
+.item { grid-template-columns: auto 1fr auto auto; padding: 10px 10px 10px 16px; transition: background var(--t-rapido); }
+.item.ativo { background: var(--fundo-fundo); }
+.item-icone { font-size: 10px; font-weight: 700; letter-spacing: .02em; color: var(--texto-2); }
+.item-meio { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.item .progresso { height: 4px; margin-top: 3px; }
+.item-estado { display: flex; align-items: center; gap: 6px; }
+.item-estado .tag { height: 24px; }
+.btn-link { border: 0; background: none; padding: 0; color: var(--perigo); font-weight: 600; font-size: var(--texto-xs); text-decoration: underline; text-underline-offset: 2px; }
+.btn-link:hover { opacity: .8; }
+
+/* parametros do .raw */
+.painel-raw { padding: 14px 16px; border-left: 3px solid var(--acento); }
+.painel-raw-titulo { font-size: var(--texto-sm); margin-bottom: 10px; }
+.painel-raw-titulo b { font-weight: 600; }
+.campos { display: flex; flex-wrap: wrap; gap: 14px; }
+.campos .campo { width: 96px; gap: 5px; }
+.campos .campo.largo { width: 140px; }
+.campos .entrada, .campos .selecao { height: 34px; }
+
+/* formato e pasta */
+.opcoes { display: flex; flex-direction: column; gap: 14px; }
+.opcoes .rotulo { margin-bottom: 2px; }
+#formatos button { min-width: 54px; justify-content: center; font-weight: 600; letter-spacing: .02em; }
+.raw-saida { gap: 8px; margin-left: 6px; }
+.selecao-sm { height: 32px; width: 120px; font-size: var(--texto-sm); }
+.destino-caixa {
+  display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px;
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--r-md); color: var(--texto-2);
+}
+.destino-caixa #pasta { color: var(--texto); }
+.btn.acento { color: var(--acento-texto); }
+
+/* barra de baixo */
+.barra { padding: 12px 12px 12px 18px; }
+.barra-parada { display: flex; align-items: center; gap: 12px; }
+.barra-andando { display: flex; flex-direction: column; gap: 9px; padding: 2px 4px 0 0; }
+.barra-titulo { font-weight: 600; }
+.pct { font-size: 22px; line-height: 1; }
+
+/* detalhes do erro */
+.log {
+  margin: 0; max-height: 46vh; overflow: auto; padding: 12px; border-radius: var(--r-md);
+  background: var(--fundo-fundo); border: 1px solid var(--borda);
+  font-family: var(--fonte-mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+}
+.modal { width: min(640px, 100%); }
+
+/* a notificacao fica acima da barra de baixo */
+.toast-area { bottom: 104px; }
