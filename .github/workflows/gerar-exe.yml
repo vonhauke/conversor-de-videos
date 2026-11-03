@@ -67,6 +67,7 @@ jobs:
       - name: Conferir o .exe
         shell: pwsh
         run: |
+          Start-Transcript conferir.log
           $exe = "dist\Conversor de Videos.exe"
           if (-not (Test-Path $exe)) { throw "o .exe nao foi gerado" }
           "{0:N0} MB" -f ((Get-Item $exe).Length / 1MB)
@@ -77,6 +78,7 @@ jobs:
           Stop-Process -Id $p.Id -Force
           Get-Process "Conversor de Videos" -ErrorAction SilentlyContinue | Stop-Process -Force
           "o .exe abriu e ficou aberto"
+          Stop-Transcript
 
       - name: Mostrar o motivo da falha
         if: failure()

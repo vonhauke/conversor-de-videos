@@ -15,6 +15,7 @@ const Conversor = (() => {
     formato: "mp4",
     convertendo: false,
     cancelando: false,
+    lotes: 0,          // lotes terminados (o teste automatico usa)
   };
   let api = null;
 
@@ -183,6 +184,7 @@ const Conversor = (() => {
       case "fim":
         s.convertendo = false;
         s.cancelando = false;
+        s.lotes += 1;
         atualizarControles();
         s.itens.forEach((_, i) => pintarItem(i));
         DS.toast(ev.resumo, s.pasta && ev.feitos ? { acao: () => api.abrir_pasta(), rotulo: "Abrir pasta", duracao: 7000 } : { duracao: 5000 });

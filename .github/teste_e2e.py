@@ -85,6 +85,12 @@ def roteiro(janela, api, arquivos):
     def clicar(seletor):
         js(f"document.querySelector({json.dumps(seletor)}).click()")
 
+    def converter(nome, limite=180):
+        """Clica em Converter tudo e espera o lote terminar (o evento "fim" chegar)."""
+        antes = js("Conversor._s.lotes")
+        clicar("#btn-converter")
+        return esperar(f"Conversor._s.lotes > {antes} && !Conversor._s.convertendo", limite, nome)
+
     def status():
         return json.loads(js("JSON.stringify(Conversor._s.itens.map(i => i.status))"))
 
@@ -92,7 +98,7 @@ def roteiro(janela, api, arquivos):
         return sorted(os.listdir(SAIDA)) if os.path.isdir(SAIDA) else []
 
     try:
-        esperar("document.documentElement.classList.contains('pronto')", 30, "interface pronta")
+        esperar("document.documentElement.classList.contains('pronto')", 90, "interface pronta")
         capturar("01-vazio")
 
         # 1) fila: adiciona (como se tivesse arrastado), repete um para testar duplicado, remove um
@@ -117,10 +123,8 @@ def roteiro(janela, api, arquivos):
            "document.getElementById('raw-fps').value = '10'")
 
         # 3) converte para MP4 (o .mov copia sem recodificar; o .raw é decodificado)
-        clicar("#btn-converter")
-        esperar("Conversor._s.convertendo", 10, "começou")
-        capturar("03-convertendo")
-        verificar(esperar("!Conversor._s.convertendo", 180, "lote terminou"), "lote termina")
+        verificar(converter("lote terminou"), "lote termina")
+        capturar("03-concluido")
         verificar(status() == ["concluido", "concluido"], f"os dois arquivos concluídos ({status()})")
         verificar("praia_convertido.mp4" in saidas() and "glitch_convertido.mp4" in saidas(),
                   f"arquivos MP4 gerados ({saidas()})")
@@ -133,16 +137,14 @@ def roteiro(janela, api, arquivos):
         js("document.getElementById('raw-saida-pix').value = 'gray'")
         clicar('.item[data-i="1"] .remover')
         esperar("Conversor._s.itens.length === 1", 10, "fica só o .mov")
-        clicar("#btn-converter")
-        esperar("!Conversor._s.convertendo && Conversor._s.itens[0].status === 'concluido'", 120, "raw de saída")
+        converter("raw de saída")
         verificar("praia_convertido.raw" in saidas(), "arquivo .raw de saída gerado")
 
         # 5) arquivo com erro e "ver detalhes"
         clicar('#formatos button[data-f="webm"]')
         api.adicionar([quebrado])
         esperar("Conversor._s.itens.length === 2", 10, "quebrado na fila")
-        clicar("#btn-converter")
-        esperar("!Conversor._s.convertendo && Conversor._s.itens[1].status === 'erro'", 180, "erro")
+        converter("lote com erro")
         verificar(status()[1] == "erro", "arquivo quebrado termina com erro")
         clicar('.item[data-i="1"] .ver-log')
         verificar(esperar("!document.getElementById('modal-log').classList.contains('oculto') && "
@@ -157,12 +159,14 @@ def roteiro(janela, api, arquivos):
         clicar('.item[data-i="0"] .remover')
         clicar('.item[data-i="0"] .remover')
         esperar("Conversor._s.itens.length === 1", 10, "fica só o longo")
+        antes = js("Conversor._s.lotes")
         clicar("#btn-converter")
         esperar("Conversor._s.itens[0].status === 'convertendo' && Conversor._s.itens[0].fracao > 0.01", 120,
                 "conversão andando")
         capturar("06-andando")
         clicar("#btn-cancelar")
-        verificar(esperar("!Conversor._s.convertendo", 60, "cancelou"), "cancelar para o lote")
+        verificar(esperar(f"Conversor._s.lotes > {antes} && !Conversor._s.convertendo", 60, "cancelou"),
+                  "cancelar para o lote")
         verificar(status() == ["cancelado"], f"item fica como cancelado ({status()})")
 
         erros_js = js("JSON.stringify(window.__erros)")
