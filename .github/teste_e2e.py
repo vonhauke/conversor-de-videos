@@ -25,7 +25,6 @@ if os.environ.get("FFMPEG_DIR"):
 
 import argila  # noqa: E402
 import main as app  # noqa: E402
-import webview  # noqa: E402
 
 TMP = tempfile.mkdtemp(prefix="conversor-teste-")
 ENTRADA = os.path.join(TMP, "entrada")
@@ -184,7 +183,8 @@ def main():
     api = app.Api(emitir)
     janela = argila.criar_janela("Conversor de Vídeos (teste)", api, 780, 780, 640, 560)
     api._janela = emitir.janela = janela
-    webview.start(roteiro, (janela, api, arquivos), http_server=True, private_mode=True)
+    # abre pelo mesmo caminho do app de verdade (argila.iniciar, com o ícone)
+    argila.iniciar(roteiro, (janela, api, arquivos), icone="icone_conversor.png", titulo=app.TITULO)
     shutil.rmtree(TMP, ignore_errors=True)
     if falhas:
         print(f"\n{len(falhas)} falha(s):\n- " + "\n- ".join(falhas))

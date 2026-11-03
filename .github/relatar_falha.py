@@ -9,8 +9,8 @@ import glob
 import os
 import sys
 
-ORDEM = ["conferir", "teste", "testes", "build", "webview2", "ffmpeg", "deps"]
-LINHAS, LARGURA = 22, 160
+ORDEM = ["conferir_eventos", "conferir", "teste", "testes", "build", "webview2", "ffmpeg", "deps"]
+LINHAS, LARGURA = 40, 200
 
 
 def escapar(texto):

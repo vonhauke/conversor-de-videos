@@ -92,10 +92,13 @@ URL_WEBVIEW2 = "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
 
 def iniciar(funcao=None, args=None, icone="icone.png", debug_env="ARGILA_DEBUG", titulo="Aplicativo"):
     """Mostra a(s) janela(s) criadas e so volta quando forem fechadas."""
+    # O icone da janela so e usado no Linux. No Windows a janela usa o icone do proprio
+    # .exe (e o pywebview so aceita .ico ali: um .png derruba o app ao abrir); no Mac, o do .app.
     caminho_icone = recurso(icone)
+    usar_icone = sys.platform.startswith("linux") and os.path.isfile(caminho_icone)
     try:
         webview.start(funcao, args, http_server=True, private_mode=True,
-                      icon=caminho_icone if os.path.isfile(caminho_icone) else None,
+                      icon=caminho_icone if usar_icone else None,
                       debug=os.environ.get(debug_env) == "1")
     except Exception as erro:
         if sys.platform != "win32":

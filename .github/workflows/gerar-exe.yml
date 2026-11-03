@@ -74,7 +74,14 @@ jobs:
           # abre o .exe de verdade e confere que continua aberto depois de 20 s
           $p = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 20
-          if ($p.HasExited) { throw "o .exe fechou sozinho (codigo $($p.ExitCode))" }
+          if ($p.HasExited) {
+            # o erro do .NET (codigo 0xE0434352) fica registrado no Log de Eventos do Windows
+            Get-WinEvent -LogName Application -MaxEvents 30 -ErrorAction SilentlyContinue |
+              Where-Object { $_.ProviderName -in @(".NET Runtime", "Application Error") } |
+              Select-Object -First 2 | ForEach-Object { $_.Message } | Out-File -Encoding utf8 conferir_eventos.log
+            Get-Content conferir_eventos.log -ErrorAction SilentlyContinue
+            throw "o .exe fechou sozinho (codigo $($p.ExitCode))"
+          }
           Stop-Process -Id $p.Id -Force
           Get-Process "Conversor de Videos" -ErrorAction SilentlyContinue | Stop-Process -Force
           "o .exe abriu e ficou aberto"
