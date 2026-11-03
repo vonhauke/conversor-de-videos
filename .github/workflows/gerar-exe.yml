@@ -1,4 +1,4 @@
-# Gera o "Conversor de Videos.exe" (Windows) e o "Conversor de Videos.app" (Mac) na nuvem do GitHub a cada envio para a master
+# Gera o "Conversor de Videos.exe" (Windows) e o "Conversor de Videos.app" (Mac) na nuvem do GitHub a cada envio para a main
 # (ou para a branch do redesign) e quando acionado pela aba Actions.
 # Antes de gerar, roda o teste de ponta a ponta na janela real (.github/teste_e2e.py).
 # Os arquivos ficam disponiveis para download na pagina da execucao, em "Artifacts".
@@ -25,24 +25,35 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: python -m pip install --upgrade pip pyinstaller pywebview
+        run: python -m pip install --upgrade pip pyinstaller pywebview 2>&1 | tee deps.log; exit ${PIPESTATUS[0]}
 
-      - name: Instalar o Edge WebView2 (ja vem no Windows 11; o servidor do GitHub nao tem)
+      - name: Instalar o Edge WebView2 (ja vem no Windows 11; o servidor do GitHub pode nao ter)
         shell: pwsh
+        continue-on-error: true
         run: |
-          Invoke-WebRequest "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile webview2.exe
-          Start-Process .\webview2.exe -ArgumentList "/silent", "/install" -Wait
-          Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty pv
+          Start-Transcript webview2.log
+          $chave = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+          $versao = (Get-ItemProperty $chave -ErrorAction SilentlyContinue).pv
+          if ($versao) { "WebView2 ja instalado: $versao" }
+          else {
+            Invoke-WebRequest "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile webview2.exe
+            $p = Start-Process .\webview2.exe -ArgumentList "/silent", "/install" -Wait -PassThru
+            "instalador terminou com codigo $($p.ExitCode)"
+            "WebView2: $((Get-ItemProperty $chave -ErrorAction SilentlyContinue).pv)"
+          }
+          Stop-Transcript
 
       - name: Baixar o ffmpeg para C:\ffmpeg\bin (o build_exe.py procura ali)
         shell: pwsh
         run: |
+          Start-Transcript ffmpeg.log
           Invoke-WebRequest https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -OutFile ffmpeg.zip
           Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-tmp
           New-Item -ItemType Directory -Force C:\ffmpeg\bin | Out-Null
           Copy-Item (Get-ChildItem ffmpeg-tmp -Recurse -Filter ffmpeg.exe).FullName C:\ffmpeg\bin\
           Copy-Item (Get-ChildItem ffmpeg-tmp -Recurse -Filter ffprobe.exe).FullName C:\ffmpeg\bin\
           C:\ffmpeg\bin\ffmpeg.exe -version | Select-Object -First 1
+          Stop-Transcript
 
       - name: Teste de ponta a ponta na janela real
         env:
@@ -69,7 +80,7 @@ jobs:
 
       - name: Mostrar o motivo da falha
         if: failure()
-        run: python .github/relatar_falha.py teste.log build.log
+        run: python .github/relatar_falha.py
 
       - uses: actions/upload-artifact@v4
         with:
@@ -148,7 +159,7 @@ jobs:
 
       - name: Mostrar o motivo da falha
         if: failure()
-        run: python .github/relatar_falha.py deps.log teste.log build.log conferir.log
+        run: python .github/relatar_falha.py
 
       - name: Compactar (ditto preserva assinatura e atalhos internos do .app)
         run: ditto -c -k --keepParent "mac/dist/Conversor de Videos.app" "${{ matrix.nome }}.zip"
