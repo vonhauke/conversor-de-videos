@@ -1,0 +1,182 @@
+# Gera o "Conversor de Videos.exe" (Windows) e o "Conversor de Videos.app" (Mac) na nuvem do GitHub a cada envio para a master
+# (ou para a branch do redesign) e quando acionado pela aba Actions.
+# Antes de gerar, roda o teste de ponta a ponta na janela real (.github/teste_e2e.py).
+# Os arquivos ficam disponiveis para download na pagina da execucao, em "Artifacts".
+# Se algo falhar, as ultimas linhas do log aparecem como anotacao de erro no resumo.
+name: Gerar Conversor de Videos (Windows e Mac)
+
+on:
+  push:
+    branches: [master, redesign-argila]
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      PYTHONUTF8: "1"   # saida do Python em UTF-8 (o console do Windows usa cp1252)
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: python -m pip install --upgrade pip pyinstaller pywebview 2>&1 | tee deps.log; exit ${PIPESTATUS[0]}
+
+      - name: Instalar o Edge WebView2 (ja vem no Windows 11; o servidor do GitHub pode nao ter)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Start-Transcript webview2.log
+          $chave = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+          $versao = (Get-ItemProperty $chave -ErrorAction SilentlyContinue).pv
+          if ($versao) { "WebView2 ja instalado: $versao" }
+          else {
+            Invoke-WebRequest "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile webview2.exe
+            $p = Start-Process .\webview2.exe -ArgumentList "/silent", "/install" -Wait -PassThru
+            "instalador terminou com codigo $($p.ExitCode)"
+            "WebView2: $((Get-ItemProperty $chave -ErrorAction SilentlyContinue).pv)"
+          }
+          Stop-Transcript
+
+      - name: Baixar o ffmpeg para C:\ffmpeg\bin (o build_exe.py procura ali)
+        shell: pwsh
+        run: |
+          Start-Transcript ffmpeg.log
+          Invoke-WebRequest https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-tmp
+          New-Item -ItemType Directory -Force C:\ffmpeg\bin | Out-Null
+          Copy-Item (Get-ChildItem ffmpeg-tmp -Recurse -Filter ffmpeg.exe).FullName C:\ffmpeg\bin\
+          Copy-Item (Get-ChildItem ffmpeg-tmp -Recurse -Filter ffprobe.exe).FullName C:\ffmpeg\bin\
+          C:\ffmpeg\bin\ffmpeg.exe -version | Select-Object -First 1
+          Stop-Transcript
+
+      - name: Teste de ponta a ponta na janela real
+        env:
+          FFMPEG_DIR: C:\ffmpeg\bin
+          PYTHONUNBUFFERED: "1"
+        run: python .github/teste_e2e.py 2>&1 | tee teste.log; exit ${PIPESTATUS[0]}
+
+      - name: Gerar o .exe
+        run: python build_exe.py 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
+      - name: Conferir o .exe
+        shell: pwsh
+        run: |
+          Start-Transcript conferir.log
+          $exe = "dist\Conversor de Videos.exe"
+          if (-not (Test-Path $exe)) { throw "o .exe nao foi gerado" }
+          "{0:N0} MB" -f ((Get-Item $exe).Length / 1MB)
+          # abre o .exe de verdade e confere que continua aberto depois de 20 s
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) {
+            # o erro do .NET (codigo 0xE0434352) fica registrado no Log de Eventos do Windows
+            Get-WinEvent -LogName Application -MaxEvents 30 -ErrorAction SilentlyContinue |
+              Where-Object { $_.ProviderName -in @(".NET Runtime", "Application Error") } |
+              Select-Object -First 2 | ForEach-Object { $_.Message } | Out-File -Encoding utf8 conferir_eventos.log
+            Get-Content conferir_eventos.log -ErrorAction SilentlyContinue
+            throw "o .exe fechou sozinho (codigo $($p.ExitCode))"
+          }
+          Stop-Process -Id $p.Id -Force
+          Get-Process "Conversor de Videos" -ErrorAction SilentlyContinue | Stop-Process -Force
+          "o .exe abriu e ficou aberto"
+          Stop-Transcript
+
+      - name: Mostrar o motivo da falha
+        if: failure()
+        run: python .github/relatar_falha.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ConversorDeVideos-Windows
+          path: dist/Conversor de Videos.exe
+          retention-days: 30
+
+  mac:
+    # Um .app para cada tipo de Mac: Apple Silicon (M1 em diante) e Intel.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            arq: arm64
+            nome: ConversorDeVideos-Mac-AppleSilicon
+          - runner: macos-15-intel
+            arq: amd64
+            nome: ConversorDeVideos-Mac-Intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: python -m pip install --upgrade pip pyinstaller pywebview 2>&1 | tee deps.log; exit ${PIPESTATUS[0]}
+
+      - name: Baixar ffmpeg e ffprobe estaticos (nao dependem do Homebrew)
+        run: |
+          mkdir -p ffmpeg-mac
+          for prog in ffmpeg ffprobe; do
+            curl -fsSL -o "$prog.zip" "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${{ matrix.arq }}/release/$prog.zip"
+            unzip -o -q "$prog.zip" -d "tmp-$prog"
+            find "tmp-$prog" -type f -name "$prog" -exec cp {} ffmpeg-mac/ \;
+          done
+          chmod +x ffmpeg-mac/*
+          xattr -cr ffmpeg-mac || true
+          ffmpeg-mac/ffmpeg -version | head -1
+          ffmpeg-mac/ffprobe -version | head -1
+          echo "Bibliotecas usadas (so as do sistema):"
+          otool -L ffmpeg-mac/ffmpeg
+
+      - name: Teste de ponta a ponta na janela real
+        env:
+          FFMPEG_DIR: ${{ github.workspace }}/ffmpeg-mac
+          PYTHONUNBUFFERED: "1"
+        run: python .github/teste_e2e.py 2>&1 | tee teste.log; exit ${PIPESTATUS[0]}
+
+      - name: Gerar o .app
+        env:
+          FFMPEG_DIR: ${{ github.workspace }}/ffmpeg-mac
+        run: cd mac && python build_mac.py 2>&1 | tee ../build.log; exit ${PIPESTATUS[0]}
+
+      - name: Conferir o .app
+        run: |
+          {
+          APP="mac/dist/Conversor de Videos.app"
+          test -d "$APP" || { echo ".app nao foi gerado"; exit 1; }
+          du -sh "$APP"
+          # o ffmpeg embutido precisa rodar sozinho, sem o do sistema
+          FF=$(find "$APP" -type f -name ffmpeg -perm -u+x | head -1)
+          echo "ffmpeg embutido: $FF"
+          "$FF" -version | head -1
+          codesign --verify --deep --strict "$APP" && echo "assinatura ad-hoc ok"
+          # abre o app de verdade e confere que continua aberto depois de 20 s
+          "$APP/Contents/MacOS/Conversor de Videos" & PID=$!
+          sleep 20
+          kill -0 $PID || { echo "o app fechou sozinho"; exit 1; }
+          kill $PID
+          echo "o app abriu e ficou aberto"
+          } 2>&1 | tee conferir.log; exit ${PIPESTATUS[0]}
+
+      - name: Mostrar o motivo da falha
+        if: failure()
+        run: python .github/relatar_falha.py
+
+      - name: Compactar (ditto preserva assinatura e atalhos internos do .app)
+        run: ditto -c -k --keepParent "mac/dist/Conversor de Videos.app" "${{ matrix.nome }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.nome }}
+          path: ${{ matrix.nome }}.zip
+          retention-days: 30

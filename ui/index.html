@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conversor de Vídeos</title>
+  <link rel="stylesheet" href="ds/tokens.css">
+  <link rel="stylesheet" href="ds/components.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="janela">
+    <header class="cabecalho">
+      <div class="marca">
+        <img src="icone.png" alt="">
+        <div>
+          <div class="marca-nome">Conversor de Vídeos</div>
+          <div class="marca-sub" id="subtitulo">Converta vários vídeos de uma vez</div>
+        </div>
+      </div>
+      <span class="espaco"></span>
+      <button class="btn btn-secundario" id="btn-adicionar"><i data-icone="plus"></i>Adicionar arquivos</button>
+    </header>
+
+    <div id="aviso" class="aviso aviso-perigo oculto" role="alert">
+      <span class="aviso-icone"><i data-icone="circle-alert" data-tamanho="18"></i></span>
+      <div class="aviso-titulo" id="aviso-titulo"></div>
+      <button class="btn btn-icone aviso-fechar" id="aviso-fechar" title="Fechar (Esc)"><i data-icone="x"></i></button>
+      <div class="aviso-texto" id="aviso-texto"></div>
+    </div>
+
+    <main class="corpo">
+      <!-- fila vazia: area para soltar -->
+      <button class="soltar" id="soltar" type="button">
+        <span class="soltar-icone"><i data-icone="upload" data-tamanho="22" data-traco="2"></i></span>
+        <span class="titulo-md">Arraste vídeos para cá</span>
+        <span class="texto-2">ou <span class="link">escolha arquivos</span> · MP4, MOV, AVI, MKV, WEBM e RAW</span>
+      </button>
+
+      <!-- fila com arquivos -->
+      <section class="cartao fila oculto" id="fila">
+        <div class="fila-cabeca">
+          <span class="titulo-sm">Fila</span>
+          <span class="texto-3 pequeno" id="fila-conta"></span>
+        </div>
+        <div class="lista rolavel" id="lista"></div>
+      </section>
+    </main>
+
+    <!-- parametros dos .raw de entrada -->
+    <section class="cartao painel-raw oculto" id="painel-raw">
+      <div class="painel-raw-titulo"><b>Parâmetros dos arquivos .raw</b><span class="texto-3"> · aplicados a todos os .raw da fila</span></div>
+      <div class="campos">
+        <label class="campo"><span class="rotulo">Largura</span><input class="entrada numeros" id="raw-largura" inputmode="numeric" value="1920"></label>
+        <label class="campo"><span class="rotulo">Altura</span><input class="entrada numeros" id="raw-altura" inputmode="numeric" value="1080"></label>
+        <label class="campo largo"><span class="rotulo">Formato de pixel</span><select class="selecao" id="raw-pix"></select></label>
+        <label class="campo"><span class="rotulo">FPS</span><input class="entrada numeros" id="raw-fps" inputmode="decimal" value="30"></label>
+      </div>
+    </section>
+
+    <!-- formato e pasta -->
+    <section class="opcoes">
+      <div class="campo">
+        <span class="rotulo">Converter para</span>
+        <div class="linha">
+          <div class="segmentado" id="formatos" role="group" aria-label="Formato de saída"></div>
+          <label class="linha raw-saida oculto" id="raw-saida">
+            <span class="pequeno texto-2">Formato de pixel da saída .raw</span>
+            <select class="selecao selecao-sm" id="raw-saida-pix"></select>
+          </label>
+        </div>
+      </div>
+      <div class="campo destino">
+        <span class="rotulo">Salvar em</span>
+        <div class="destino-caixa">
+          <i data-icone="folder" data-tamanho="16"></i>
+          <span class="cortar" id="pasta">Pasta do primeiro vídeo adicionado</span>
+          <span class="espaco"></span>
+          <button class="btn btn-fantasma btn-sm" id="btn-abrir-pasta" title="Abrir a pasta">Abrir</button>
+          <button class="btn btn-fantasma btn-sm acento" id="btn-trocar">Trocar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- barra de baixo: parado / convertendo -->
+    <footer class="cartao barra">
+      <div class="barra-parada" id="barra-parada">
+        <span class="texto-2" id="resumo">Nenhum arquivo na fila</span>
+        <span class="espaco"></span>
+        <button class="btn btn-primario btn-lg" id="btn-converter" disabled><i data-icone="play" data-tamanho="16"></i>Converter tudo</button>
+      </div>
+      <div class="barra-andando oculto" id="barra-andando">
+        <div class="linha">
+          <span class="cortar barra-titulo" id="geral-rotulo">Convertendo 0 de 0</span>
+          <span class="espaco"></span>
+          <span class="pct serif numeros" id="geral-pct">0%</span>
+        </div>
+        <div class="progresso" id="geral-barra"><span></span></div>
+        <div class="linha">
+          <span class="pequeno texto-3" id="geral-resumo"></span>
+          <span class="espaco"></span>
+          <button class="btn btn-secundario btn-sm" id="btn-cancelar">Cancelar</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- detalhes do erro -->
+  <div class="fundo-modal oculto" id="modal-log">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="log-titulo">
+      <div class="modal-cabeca">
+        <span class="titulo-sm cortar" id="log-titulo">Detalhes do erro</span>
+        <span class="espaco"></span>
+        <button class="btn btn-icone" id="log-fechar" title="Fechar (Esc)"><i data-icone="x"></i></button>
+      </div>
+      <div class="modal-corpo"><pre class="log selecionavel" id="log-texto"></pre></div>
+      <div class="modal-rodape">
+        <button class="btn btn-secundario" id="log-copiar"><i data-icone="copy" data-tamanho="15"></i>Copiar</button>
+        <button class="btn btn-primario" id="log-ok">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="soltar-tela oculto" id="soltar-tela"><div><i data-icone="upload" data-tamanho="28" data-traco="2"></i><span class="titulo-md">Solte para adicionar à fila</span></div></div>
+
+  <script src="ds/icons.js"></script>
+  <script src="ds/ds.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
