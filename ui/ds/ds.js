@@ -57,6 +57,7 @@ const DS = (() => {
       area.className = "toast-area";
       document.body.appendChild(area);
     }
+    area.querySelectorAll(".toast").forEach((t) => t.remove());   // uma de cada vez
     const el = document.createElement("div");
     el.className = "toast";
     el.setAttribute("role", "status");
